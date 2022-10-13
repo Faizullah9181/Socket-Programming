@@ -1,4 +1,10 @@
-import java.io.*;
+import javafx.application.Platform;
+import javafx.embed.swing.JFXPanel;
+import javafx.stage.FileChooser;
+
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -6,6 +12,56 @@ public class Server {
     static ServerSocket serverSocket;
     static DataOutputStream dos;
 
+    /**
+     * Method for sending file
+     */
+    public static void sendFile() {
+        new JFXPanel();
+        Platform.runLater(() -> {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Open Resource File");
+            fileChooser.getExtensionFilters().addAll(
+                    new FileChooser.ExtensionFilter("All Files", "*.*")
+            );
+            File selectedFile = fileChooser.showOpenDialog(null);
+
+            if (selectedFile != null) {
+                try {
+                    FileInputStream fis = new FileInputStream(selectedFile);
+                    byte[] buffer = new byte[1];
+
+                    int prevProgress = 0;
+
+                    System.out.print("\nProgress:-\n[");
+                    //sending file in chunks
+                    while (fis.read(buffer) > 0) {
+                        dos.write(buffer);
+                        dos.flush();
+
+                        //progress
+                        int progress = (int) ((fis.getChannel().position() * 70) / selectedFile.length());
+                        if (progress != prevProgress) {
+                            System.out.print("=");
+                            prevProgress = progress;
+                        }
+                    }
+                    System.out.println("]");
+
+                    dos.close();
+                    fis.close();
+                    System.out.println("\nFile sent");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+
+    /**
+     * Main method
+     * @param args command line arguments
+     */
     public static void main(String[] args) {
 
         try {
@@ -17,36 +73,11 @@ public class Server {
                 System.out.println("Client connected");
                 dos = new DataOutputStream(socket.getOutputStream());
 
+
                 new Thread(() -> {
                     try {
-                        File file = new File("C:\\Users\\ijlal\\Desktop\\Controller.java");
-                        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-                        writer.write(String.valueOf(file.length()));
-                        writer.newLine();
-                        writer.flush();
+                        sendFile();
 
-                        FileInputStream fis = new FileInputStream(file);
-                        byte[] buffer = new byte[1];
-
-                        int prevProgress = 0;
-
-                        System.out.print("\nProgress:-\n[");
-                        //sending file in chunks
-                        while (fis.read(buffer) > 0) {
-                            dos.write(buffer);
-                            dos.flush();
-
-                            //progress
-                            int progress = (int) ((fis.getChannel().position() * 70) / file.length());
-                            if (progress != prevProgress) {
-                                System.out.print("=");
-                                prevProgress = progress;
-                            }
-                        }
-                        System.out.println("]");
-                        fis.close();
-                        dos.close();
-                        System.out.println("\nFile sent");
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
